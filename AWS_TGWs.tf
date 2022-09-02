@@ -1,3 +1,53 @@
+# Customer VPC Creation
+
+module "use1_prod_vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+  name = "use1-app-prod-vpc"
+  cidr = "10.51.0.0/16"
+  azs = ["us-east-1a"]
+  private_subnets = ["10.51.1.0/24"]
+  public_subnets = ["10.51.2.0/24"]
+  enable_nat_gateway = true
+}
+
+module "use1_dev_vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+  name = "use1-app-dev-vpc"
+  cidr = "10.52.0.0/16"
+  azs = ["us-east-1a"]
+  private_subnets = ["10.52.1.0/24"]
+  public_subnets = ["10.52.2.0/24"]
+  enable_nat_gateway = true
+}
+
+module "usw2_prod_vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+  name = "usw2-app-prod-vpc"
+  cidr = "10.61.0.0/16"
+  azs = ["us-west-2a"]
+  private_subnets = ["10.61.1.0/24"]
+  public_subnets = ["10.61.2.0/24"]
+  enable_nat_gateway = true
+  providers = {
+    aws = aws.west
+   }
+}
+
+module "usw2_dev_vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+  name = "usw2-app-dev-vpc"
+  cidr = "10.62.0.0/16"
+  azs = ["us-west-2a"]
+  private_subnets = ["10.62.1.0/24"]
+  public_subnets = ["10.62.2.0/24"]
+  enable_nat_gateway = true
+  providers = {
+    aws = aws.west
+   }
+}
+
+# US-East-1 Configuration
+
 resource "aws_ec2_transit_gateway" "tgw_us_east" {
   description = "TGW in US-East-1"
   amazon_side_asn = var.asn_tgw_region1
@@ -7,28 +57,36 @@ resource "aws_ec2_transit_gateway" "tgw_us_east" {
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "USE1_TGWtoProdVPC" {
-  subnet_ids         = var.prod_app_subnet_region1
+  subnet_ids         = module.use1_prod_vpc.public_subnets
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
-  vpc_id             = var.prod_app_vpc_region1
+  vpc_id             = module.use1_prod_vpc.vpc_id
   transit_gateway_default_route_table_association = false
   transit_gateway_default_route_table_propagation = false
+  depends_on = [
+    module.use1_prod_vpc
+  ]
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "USE1_TGWtoDevVPC" {
-  subnet_ids         = var.dev_app_subnet_region1
+  subnet_ids         = module.use1_dev_vpc.public_subnets
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
-  vpc_id             = var.dev_app_vpc_region1
+  vpc_id             = module.use1_dev_vpc.vpc_id
   transit_gateway_default_route_table_association = false
   transit_gateway_default_route_table_propagation = false
+  depends_on = [
+    module.use1_dev_vpc
+  ]
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "USE1_TGWtoTransitVPC" {
-  #replace subnet IDs with the subnet IDs of the primary and HA gateway transit subnets
-  subnet_ids         = ["replace_me","replace_me"]
+  subnet_ids = [module.transit_us_east.vpc.subnets[0].subnet_id,module.transit_us_east.vpc.subnets[2].subnet_id]
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
   vpc_id             = module.transit_us_east.transit_gateway.vpc_id
   transit_gateway_default_route_table_association = false
   transit_gateway_default_route_table_propagation = false
+  depends_on = [
+    module.transit_us_east
+  ]
 }
 
 resource "aws_ec2_transit_gateway_connect" "USE1_Connect_Prod" {
@@ -157,13 +215,58 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "USE1_Dev_RT_propagat
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.USE1_Dev_RT.id
 }
 
-resource "aws_route" "USE1_AVX_VPC_to_TGW_route" {
-  #replace route table ID with the RTB associated with the primary and HA gateway transit subnets
-  route_table_id            = "replace_me"
-  destination_cidr_block    = "192.168.101.0/24"
+resource "aws_route" "USE1_AVX_VPC_to_TGW_route0" {
+  route_table_id = module.transit_us_east.vpc.route_tables[0]
+  destination_cidr_block    = var.tgw_region1_cidr_block
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_east,
+    module.transit_us_east
+  ]
 }
 
+resource "aws_route" "USE1_AVX_VPC_to_TGW_route1" {
+  route_table_id = module.transit_us_east.vpc.route_tables[1]
+  destination_cidr_block    = var.tgw_region1_cidr_block
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_east,
+    module.transit_us_east
+  ]
+}
+
+resource "aws_route" "USE1_AVX_VPC_to_TGW_route2" {
+  route_table_id = module.transit_us_east.vpc.route_tables[2]
+  destination_cidr_block    = var.tgw_region1_cidr_block
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_east,
+    module.transit_us_east.transit_gateway
+  ]
+}
+
+resource "aws_route" "USE1_prod_VPC_route" {
+  route_table_id = module.use1_prod_vpc.public_route_table_ids[0]
+  destination_cidr_block    = "10.0.0.0/8"
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_east,
+    module.use1_prod_vpc
+  ]
+}
+
+resource "aws_route" "USE1_dev_VPC_route" {
+  route_table_id = module.use1_dev_vpc.public_route_table_ids[0]
+  destination_cidr_block    = "10.0.0.0/8"
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_east.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_east,
+    module.use1_dev_vpc
+  ]
+}
+
+
+# US-West-2 Configuration
 
 resource "aws_ec2_transit_gateway" "tgw_us_west" {
   description = "TGW in US-West-1"
@@ -175,31 +278,39 @@ resource "aws_ec2_transit_gateway" "tgw_us_west" {
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "USW2_TGWtoProdVPC" {
-  subnet_ids         = var.prod_app_subnet_region2
+  subnet_ids         = module.usw2_prod_vpc.public_subnets
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
-  vpc_id             = var.prod_app_vpc_region2
+  vpc_id             = module.usw2_prod_vpc.vpc_id
   transit_gateway_default_route_table_association = false
   transit_gateway_default_route_table_propagation = false
   provider = aws.west
+  depends_on = [
+    module.usw2_prod_vpc
+  ]
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "USW2_TGWtoDevVPC" {
-  subnet_ids         = var.dev_app_subnet_region2
+  subnet_ids         = module.usw2_dev_vpc.public_subnets
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
-  vpc_id             = var.dev_app_vpc_region2
+  vpc_id             = module.usw2_dev_vpc.vpc_id
   transit_gateway_default_route_table_association = false
   transit_gateway_default_route_table_propagation = false
   provider = aws.west
+  depends_on = [
+    module.usw2_dev_vpc
+  ]
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "USW2_TGWtoTransitVPC" {
-  #replace subnet IDs with the subnet IDs of the primary and HA gateway transit subnets
-  subnet_ids         = ["replace_me","replace_me"]
+  subnet_ids = [module.transit_us_west.vpc.subnets[0].subnet_id,module.transit_us_west.vpc.subnets[2].subnet_id]
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
   vpc_id             = module.transit_us_west.transit_gateway.vpc_id
   transit_gateway_default_route_table_association = false
   transit_gateway_default_route_table_propagation = false
   provider = aws.west
+  depends_on = [
+    module.transit_us_east
+  ]
 }
 
 resource "aws_ec2_transit_gateway_connect" "USW2_Connect_Prod" {
@@ -348,10 +459,57 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "USW2_Dev_RT_propagat
   provider = aws.west
 }
 
-resource "aws_route" "USW2_AVX_VPC_to_TGW_route" {
-  #replace route table ID with the RTB associated with the primary and HA gateway transit subnets
-  route_table_id            = "replace_me"
-  destination_cidr_block    = "192.168.201.0/24"
+resource "aws_route" "USW2_AVX_VPC_to_TGW_route0" {
+  route_table_id = module.transit_us_west.vpc.route_tables[0]
+  destination_cidr_block    = var.tgw_region2_cidr_block
   transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_west,
+    module.transit_us_west
+  ]
+  provider = aws.west
+}
+
+resource "aws_route" "USW2_AVX_VPC_to_TGW_route1" {
+  route_table_id = module.transit_us_west.vpc.route_tables[1]
+  destination_cidr_block    = var.tgw_region2_cidr_block
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_west,
+    module.transit_us_west
+  ]
+  provider = aws.west
+}
+
+resource "aws_route" "USW2_AVX_VPC_to_TGW_route2" {
+  route_table_id = module.transit_us_west.vpc.route_tables[2]
+  destination_cidr_block    = var.tgw_region2_cidr_block
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_west,
+    module.transit_us_west.transit_gateway
+  ]
+  provider = aws.west
+}
+
+resource "aws_route" "USW2_prod_VPC_route" {
+  route_table_id = module.usw2_prod_vpc.public_route_table_ids[0]
+  destination_cidr_block    = "10.0.0.0/8"
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_west,
+    module.usw2_prod_vpc
+  ]
+  provider = aws.west
+}
+
+resource "aws_route" "USW2_dev_VPC_route" {
+  route_table_id = module.usw2_dev_vpc.public_route_table_ids[0]
+  destination_cidr_block    = "10.0.0.0/8"
+  transit_gateway_id = aws_ec2_transit_gateway.tgw_us_west.id
+  depends_on = [
+    aws_ec2_transit_gateway.tgw_us_west,
+    module.usw2_dev_vpc
+  ]
   provider = aws.west
 }
