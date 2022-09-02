@@ -61,40 +61,16 @@ variable cidr_tgw_region1 {
   default = ["192.168.101.0/24"]
 }
 
+variable tgw_region1_cidr_block {
+  default = "192.168.101.0/24"
+}
+
 variable cidr_tgw_region2 {
   default = ["192.168.201.0/24"]
 }
 
-variable prod_app_vpc_region1 {
-  default = "replace_me"
-}
-
-variable prod_app_subnet_region1 {
-  default = ["replace_me"]
-}
-
-variable dev_app_vpc_region1 {
-  default = "replace_me"
-}
-
-variable dev_app_subnet_region1 {
-  default = ["replace_me"]
-}
-
-variable prod_app_vpc_region2 {
-  default = "replace_me"
-}
-
-variable prod_app_subnet_region2 {
-  default = ["replace_me"]
-}
-
-variable dev_app_vpc_region2 {
-  default = "replace_me"
-}
-
-variable dev_app_subnet_region2 {
-  default = ["replace_me"]
+variable tgw_region2_cidr_block {
+  default = "192.168.201.0/24"
 }
 
 variable connection_name_use1_prod_1 {
