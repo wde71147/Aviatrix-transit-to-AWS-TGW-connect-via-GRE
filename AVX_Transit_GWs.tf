@@ -16,7 +16,7 @@ resource "aviatrix_segmentation_network_domain" "dev_domain" {
 
 module "transit_us_east" {
   source  = "terraform-aviatrix-modules/mc-transit/aviatrix"
-  version = "2.1.4"
+  version = "2.2.0"
   cloud = "AWS"
   name = var.transitname1
   cidr = var.transit_cidr1
@@ -35,7 +35,7 @@ module "transit_us_east" {
   
 module "transit_us_west" {
   source  = "terraform-aviatrix-modules/mc-transit/aviatrix"
-  version = "2.1.4"
+  version = "2.2.0"
   cloud = "AWS"
   name = var.transitname2
   cidr = var.transit_cidr2
@@ -52,8 +52,9 @@ module "transit_us_west" {
 }
   
 module "transit-peering" {
-  source  = "git::https://github.com/terraform-aviatrix-modules/terraform-aviatrix-mc-transit-peering"
-  #version = "1.0.6"
+  #source  = "git::https://github.com/terraform-aviatrix-modules/terraform-aviatrix-mc-transit-peering"
+  source = "terraform-aviatrix-modules/mc-transit-peering/aviatrix"
+  version = "1.0.6"
   transit_gateways = [
     module.transit_us_east.transit_gateway.gw_name,
     module.transit_us_west.transit_gateway.gw_name
@@ -71,7 +72,8 @@ resource "aviatrix_transit_external_device_conn" "USE1_AVXtoTGW_prod_1" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_use1_prod_1
   remote_tunnel_cidr = var.remote_tunnel_cidr_use1_prod_1
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  enable_jumbo_frame  = false
 }
 
 resource "aviatrix_transit_external_device_conn" "USE1_AVXtoTGW_prod_2" {
@@ -85,7 +87,8 @@ resource "aviatrix_transit_external_device_conn" "USE1_AVXtoTGW_prod_2" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_use1_prod_2
   remote_tunnel_cidr = var.remote_tunnel_cidr_use1_prod_2
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  enable_jumbo_frame  = false
 }
 
 resource "aviatrix_transit_external_device_conn" "USE1_AVXtoTGW_dev_1" {
@@ -99,7 +102,8 @@ resource "aviatrix_transit_external_device_conn" "USE1_AVXtoTGW_dev_1" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_use1_dev_1
   remote_tunnel_cidr = var.remote_tunnel_cidr_use1_dev_1
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  enable_jumbo_frame  = true
 }
 
 resource "aviatrix_transit_external_device_conn" "USE1_AVXtoTGW_dev_2" {
@@ -113,7 +117,8 @@ resource "aviatrix_transit_external_device_conn" "USE1_AVXtoTGW_dev_2" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_use1_dev_2
   remote_tunnel_cidr = var.remote_tunnel_cidr_use1_dev_2
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  enable_jumbo_frame  = true
 }
 
 
@@ -128,7 +133,8 @@ resource "aviatrix_transit_external_device_conn" "USW2_AVXtoTGW_prod_1" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_usw2_prod_1
   remote_tunnel_cidr = var.remote_tunnel_cidr_usw2_prod_1
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  enable_jumbo_frame  = false
 }
 
 resource "aviatrix_transit_external_device_conn" "USW2_AVXtoTGW_prod_2" {
@@ -142,7 +148,8 @@ resource "aviatrix_transit_external_device_conn" "USW2_AVXtoTGW_prod_2" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_usw2_prod_2
   remote_tunnel_cidr = var.remote_tunnel_cidr_usw2_prod_2
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_prod
+  enable_jumbo_frame  = false
 }
 
 resource "aviatrix_transit_external_device_conn" "USW2_AVXtoTGW_dev_1" {
@@ -156,7 +163,8 @@ resource "aviatrix_transit_external_device_conn" "USW2_AVXtoTGW_dev_1" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_usw2_dev_1
   remote_tunnel_cidr = var.remote_tunnel_cidr_usw2_dev_1
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  enable_jumbo_frame  = true
 }
 
 resource "aviatrix_transit_external_device_conn" "USW2_AVXtoTGW_dev_2" {
@@ -170,7 +178,8 @@ resource "aviatrix_transit_external_device_conn" "USW2_AVXtoTGW_dev_2" {
   tunnel_protocol   = "GRE"
   local_tunnel_cidr = var.local_tunnel_cidr_usw2_dev_2
   remote_tunnel_cidr = var.remote_tunnel_cidr_usw2_dev_2
-  manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  #manual_bgp_advertised_cidrs = var.manual_bgp_adv_cidrs_dev
+  enable_jumbo_frame  = true
 }
 
 resource "aviatrix_segmentation_network_domain_association" "USE1_AVXtoTGW_prod_1_association" {
